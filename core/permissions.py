@@ -12,26 +12,37 @@ def hash_password(password):
     return hashlib.md5(password.encode()).hexdigest()
 
 
-def load_password_hash():
+def load_config():
     if not os.path.exists(CONFIG_PATH):
-        return None
+        return {}
     with open(CONFIG_PATH, "r") as f:
-        return json.load(f).get("admin_password_hash")
+        return json.load(f)
+
+
+def save_config(data):
+    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+    with open(CONFIG_PATH, "w") as f:
+        json.dump(data, f, indent=4)
+
+
+def load_password_hash():
+    config = load_config()
+    return config.get("admin_password_hash")
 
 
 def save_password_hash(new_hash):
-    with open(CONFIG_PATH, "w") as f:
-        json.dump({"admin_password_hash": new_hash}, f, indent=4)
+    config = load_config()
+    config["admin_password_hash"] = new_hash
+    save_config(config)
 
 
 def requires_permission(command):
     # List of sensitive commands that require permission
-    # TODO: access webcam, take photo
     restricted_commands = [
         "shutdown", "restart", "lock system", "change system password",
         "send email", "open settings"
     ]
-    return any(restricted in command for restricted in restricted_commands)
+    return any(restricted in command.lower() for restricted in restricted_commands)
 
 
 def request_permission_gui():
@@ -46,9 +57,6 @@ def request_permission_gui():
         return False
 
     input_hash = hash_password(password)
-
-    print(f"[DEBUG] Input Hash:   {input_hash}")
-    print(f"[DEBUG] Stored Hash:  {stored_hash}")
 
     if input_hash == stored_hash:
         messagebox.showinfo("Access Granted", "Permission granted.")

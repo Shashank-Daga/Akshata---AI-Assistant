@@ -23,21 +23,22 @@ def get_recent_files(within_hours=24, max_results=10):
                     filepath = os.path.join(root, file)
                     mtime = datetime.fromtimestamp(os.path.getmtime(filepath))
                     if mtime >= cutoff:
-                        recent_files.append((filepath, mtime.strftime("%Y-%m-%d %H:%M")))
+                        recent_files.append((filepath, mtime))
                 except Exception:
                     continue
 
     if not recent_files:
         return f"No files modified in the last {within_hours} hours."
 
-    # Sort by modification time descending
+    # Sort by actual datetime object (mtime)
     recent_files.sort(key=lambda x: x[1], reverse=True)
 
     return "\n".join(
-        [f"{os.path.basename(path)} - Modified: {mtime}" for path, mtime in recent_files[:max_results]]
+        [f"{os.path.basename(path)} - Modified: {mtime.strftime('%Y-%m-%d %H:%M')}"
+         for path, mtime in recent_files[:max_results]]
     )
 
 
 # Example usage
 if __name__ == "__main__":
-    print(get_recent_files(within_hours=24))  # Or try 1 for the past hour
+    print(get_recent_files(within_hours=24))

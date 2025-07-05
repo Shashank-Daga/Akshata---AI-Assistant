@@ -1,8 +1,7 @@
 import cv2
 import os
-# import time
-# import threading
-
+import time
+import threading
 from datetime import datetime
 
 SAVE_DIR = os.path.join("data", "photos")
@@ -29,9 +28,12 @@ def take_photo(filename=None):
         filename = filename if filename.endswith(".jpg") else filename + ".jpg"
 
     full_path = os.path.join(SAVE_DIR, filename)
-    os.makedirs(SAVE_DIR, exist_ok=True)
-    cv2.imwrite(full_path, frame)
-    return f"Photo captured and saved as {filename}."
+
+    try:
+        cv2.imwrite(full_path, frame)
+        return f"Photo captured and saved as {filename}."
+    except Exception as e:
+        return f"Failed to save image: {e}"
 
 
 def start_webcam():
@@ -54,27 +56,27 @@ def start_webcam():
     return "Webcam closed."
 
 
-# def start_time_lapse(interval_sec, duration_sec):
-#     global stop_lapse
-#
-#     def lapse_worker():
-#         nonlocal interval_sec, duration_sec
-#         start_time = time.time()
-#         count = 1
-#
-#         while not stop_lapse and (time.time() - start_time) < duration_sec:
-#             filename = f"timelapse_{count}_{datetime.now().strftime('%H-%M-%S')}.png"
-#             take_photo(filename)
-#             count += 1
-#             time.sleep(interval_sec)
-#
-#     stop_lapse = False
-#     thread = threading.Thread(target=lapse_worker, daemon=True)
-#     thread.start()
-#     return f"Started time-lapse: every {interval_sec} seconds for {duration_sec} seconds."
-#
-#
-# def stop_time_lapse():
-#     global stop_lapse
-#     stop_lapse = True
-#     return "Time-lapse stopped."
+# 📸 Time-lapse logic
+def start_time_lapse(interval_sec, duration_sec):
+    global stop_lapse
+
+    def lapse_worker():
+        start_time = time.time()
+        count = 1
+        while not stop_lapse and (time.time() - start_time) < duration_sec:
+            filename = f"timelapse_{count}_{datetime.now().strftime('%H-%M-%S')}.jpg"
+            result = take_photo(filename)
+            print(result)
+            count += 1
+            time.sleep(interval_sec)
+
+    stop_lapse = False
+    thread = threading.Thread(target=lapse_worker, daemon=True)
+    thread.start()
+    return f"Started time-lapse: every {interval_sec} seconds for {duration_sec} seconds."
+
+
+def stop_time_lapse():
+    global stop_lapse
+    stop_lapse = True
+    return "Time-lapse stopped."

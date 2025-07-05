@@ -1,8 +1,6 @@
 import threading
 import datetime
-import time
 import uuid
-
 import dateparser
 import tkinter as tk
 import json
@@ -12,7 +10,6 @@ from tkinter import messagebox
 from core.speakers import speak
 
 REMINDER_FILE = "config/reminder.json"
-
 scheduled_reminders = []
 
 
@@ -24,6 +21,7 @@ def speak_and_popup(msg):
 
 
 def schedule_reminder(msg, remind_time):
+    remind_time = dateparser.parse(remind_time)  # Converts to datetime
     delay = (remind_time - datetime.datetime.now()).total_seconds()
 
     if delay <= 0:
@@ -33,6 +31,7 @@ def schedule_reminder(msg, remind_time):
 
     t = threading.Timer(delay, lambda: speak_and_popup(msg))
     t.start()
+
     scheduled_reminders.append({
         "id": reminder_id,
         "message": msg,
@@ -48,11 +47,11 @@ def save_reminders():
         json.dump([
             {
                 "id": r["id"],
-                "message": r["msg"],
+                "message": r["message"],  # ✅ Fixed incorrect key
                 "time": r["time"].isoformat()
             }
             for r in scheduled_reminders
-            if r["time"] > datetime.datetime.now()            # Save only future reminders
+            if r["time"] > datetime.datetime.now()
         ], f, indent=2)
 
 
@@ -106,14 +105,32 @@ def handle_reminder_cmd(query):
         else:
             return "🔍 No matching reminders found to cancel."
 
+    elif "list reminders" in query:
+        return list_reminders()
+
     return None
+
+
+def list_reminders():
+    now = datetime.datetime.now()
+    if not scheduled_reminders:
+        return "📭 No upcoming reminders."
+
+    output = "📋 Upcoming Reminders:\n"
+    for r in scheduled_reminders:
+        if r["time"] > now:
+            output += f"• {r['message']} at {r['time'].strftime('%Y-%m-%d %I:%M %p')}\n"
+    return output
 
 
 def get_upcoming_reminders():
     return [
-        {"message": msg, "time": time.strftime("%Y-%m-%d %I:%M %p")}
-        for msg, t in scheduled_reminders
-        if t > datetime.datetime.now()
+        {
+            "message": r["message"],
+            "time": r["time"].strftime("%Y-%m-%d %I:%M %p")
+        }
+        for r in scheduled_reminders
+        if r["time"] > datetime.datetime.now()
     ]
 
 

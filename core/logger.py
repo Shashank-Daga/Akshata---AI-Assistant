@@ -34,19 +34,33 @@ def read_log():
         return f.read()
 
 
+# 🧠 Filtered memory viewer
 def get_filtered_memory_logs(date_filter=None, keyword_filter=None, type_filter=None):
     results = []
-    log_file = os.path.join("memory", "history.log")
+    log_file = CONVERSATION_LOG_PATH  # Fixed path
+
     if not os.path.exists(log_file):
         return results
 
-    with open(log_file, "r") as f:
-        for line in f:
-            if date_filter and date_filter not in line:
+    with open(log_file, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    entry = []
+    for line in lines:
+        if line.strip() == "-" * 40:
+            block = "".join(entry)
+            if date_filter and date_filter not in block:
+                entry = []
                 continue
-            if keyword_filter and keyword_filter.lower() not in line.lower():
+            if keyword_filter and keyword_filter.lower() not in block.lower():
+                entry = []
                 continue
-            if type_filter and type_filter.lower() not in line.lower():
+            if type_filter and type_filter.lower() not in block.lower():
+                entry = []
                 continue
-            results.append(line.strip())
+            results.append(block.strip())
+            entry = []
+        else:
+            entry.append(line)
+
     return results

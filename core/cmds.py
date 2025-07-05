@@ -3,8 +3,6 @@ import subprocess
 import webbrowser
 import pyautogui
 import re
-# import threading
-# import time
 
 from datetime import datetime
 from core.permissions import requires_permission, request_permission_gui
@@ -24,12 +22,14 @@ from core.window_manager import (
     open_task_manager
 )
 from core.recent_files import get_recent_files
-# from core.internet_tools import wikipedia, weather, calculator
+from core.reminder import handle_reminder_cmd
+from core.internet_tools.calculator import evaluate_expression
+from core.internet_tools.wikipedia import fetch_wikipedia_summary
+from core.internet_tools.weather import get_weather_info
+from core.tools import search_web, translate_text
 
-SEARCH_FOLDER = "D:\\College"
 
-# scheduled_thread = None
-# stop_scheduled_flag = False
+SEARCH_FOLDER = os.path.expanduser("~/Documents")  # Instead of hardcoded D:\\College
 
 
 # 🔍 File Search
@@ -43,54 +43,21 @@ def search_file(key):
     return f"No file found with keyword: {key}"
 
 
-# # 📸 Time-Lapse Logic
-# def parse_scheduled_cmd(query):
-#     match = re.search(r"take photo every (\d+) (seconds?|minutes?) for (\d+) (minutes?|hours?)", query.lower())
-#     if match:
-#         interval = int(match.group(1))
-#         interval_unit = match.group(2)
-#         duration = int(match.group(3))
-#         duration_unit = match.group(4)
-#
-#         interval_secs = interval * (60 if "minute" in interval_unit else 1)
-#         duration_secs = duration * (3600 if "hour" in duration_unit else 60)
-#         return interval_secs, duration_secs
-#
-#     return None, None
-#
-#
-# def schedule_photos(interval, duration):
-#     global stop_scheduled_flag
-#     stop_scheduled_flag = False
-#
-#     end_time = time.time() + duration
-#     count = 1
-#
-#     os.makedirs("captured_photos", exist_ok=True)
-#
-#     while time.time() < end_time and not stop_scheduled_flag:
-#         filename = f"time_lapse_{count}_{datetime.now().strftime('%H-%M-%S')}.jpg"
-#         result = take_photo(filename)
-#         print(result)
-#         log_action(f"Time-lapse photo captured: {filename}")
-#         count += 1
-#         time.sleep(interval)
-
-
 # 🚀 Main Command Execution
 def exe_cmd(query):
-    # global scheduled_thread, stop_scheduled_flag
     query = query.lower()
 
+    # 🔒 Permission check
     if requires_permission(query):
         if not request_permission_gui():
             return "Permission denied."
 
-    # Fallback to learned intent
+    # 💡 Intent memory fallback
     learned_cmd = match_intent(query)
     if learned_cmd:
         return exe_cmd(learned_cmd)
 
+    # 🧠 Intent learning command
     if query.startswith("remember when i say"):
         try:
             parts = query.split("i mean")
@@ -101,8 +68,13 @@ def exe_cmd(query):
         except:
             return "Sorry, I couldn't understand the intent mapping."
 
-    # Opening Applications
-    if "open notepad" in query:
+    # Reminder Handling
+    reminder_response = handle_reminder_cmd(query)
+    if reminder_response:
+        return reminder_response
+
+    # 📂 Application Commands
+    elif "open notepad" in query:
         os.system("notepad")
         return "Opening Notepad."
 
@@ -130,6 +102,21 @@ def exe_cmd(query):
             webbrowser.open(f"https://www.youtube.com/results?search_query={song}")
             return f"Playing {song} on YouTube."
         return "Please specify what to play."
+    
+    # Web Search
+    if query.startswith("search for"):
+        query = query.replace("search for", "").strip()
+        return search_web(query)
+
+    # Translation
+    if query.startswith("translate "):
+        parts = query.split(" to ")
+        if len(parts) == 2:
+            text = parts[0].replace("translate", "").strip()
+            target = parts[1].strip()
+            return translate_text(text, target)
+        else:
+            return "Please specify text and target language like: 'translate hello to spanish'"
 
     # 📁 File Search
     elif "search file" in query or "open file" in query:
@@ -138,14 +125,14 @@ def exe_cmd(query):
             return "Please specify the file name."
         return search_file(key)
 
-    # Window Manager
-    elif "minimize all" in query or "minimise all" in query:
+    # 🪟 Window Manager
+    elif "minimize all" in query:
         return minimize_all_windows()
 
-    elif "maximize window" in query or "maximize current window" in query or "maximise window" in query or "maximise current window" in query:
+    elif "maximize window" in query or "maximize current window" in query:
         return maximize_current_window()
 
-    elif "minimize window" in query or "minimize current window" in query or "minimise window" in query or "minimise current window" in query:
+    elif "minimize window" in query or "minimize current window" in query:
         return minimize_current_window()
 
     elif "close window" in query or "close current window" in query:
@@ -173,14 +160,7 @@ def exe_cmd(query):
     elif "open task manager" in query:
         return open_task_manager()
 
-    # File manager
-    elif "recent files" in query or "files used today" in query:
-        return get_recent_files(within_hours=24)
-
-    elif "files modified in the last hour" in query:
-        return get_recent_files(within_hours=1)
-
-    # 🖥️ System Tasks
+    # 🖼️ Camera / Screenshot
     elif "take screenshot" in query:
         folder = "screenshots"
         os.makedirs(folder, exist_ok=True)
@@ -189,7 +169,13 @@ def exe_cmd(query):
         pyautogui.screenshot(filepath)
         return f"Screenshot saved as {filepath}"
 
-    # Volume
+    elif "take photo" in query or "take a picture" in query:
+        return take_photo()
+
+    elif "start webcam" in query or "open camera" in query:
+        return start_webcam()
+
+    # 🔊 Volume
     elif "increase volume" in query:
         change_volume(up=True)
         return "Volume increased."
@@ -213,7 +199,7 @@ def exe_cmd(query):
             set_volume_level(percent)
             return f"Volume set to {percent}%."
 
-    # Brightness
+    # 💡 Brightness
     elif "increase brightness" in query:
         change_brightness(up=True)
         return "Brightness increased."
@@ -229,25 +215,14 @@ def exe_cmd(query):
             set_brightness(percent)
             return f"Brightness set to {percent}%."
 
-    # elif "take photo" in query and "every" in query:
-    #     interval, duration = parse_scheduled_cmd(query)
-    #     if interval and duration:
-    #         scheduled_thread = threading.Thread(target=schedule_photos, args=(interval, duration))
-    #         scheduled_thread.daemon = True
-    #         scheduled_thread.start()
-    #         return f"Time-lapse started: every {interval} seconds for {duration // 60} minutes."
-    #     return "Could not understand time-lapse duration or interval."
-    #
-    # elif "stop time-lapse" in query or "cancel time-lapse" in query:
-    #     stop_scheduled_flag = True
-    #     return "Time-lapse photo capture stopped."
+    # 📄 Recent Files
+    elif "recent files" in query or "files used today" in query:
+        return get_recent_files(within_hours=24)
 
-    elif "take photo" in query or "take a picture" in query:
-        return take_photo()
+    elif "files modified in the last hour" in query:
+        return get_recent_files(within_hours=1)
 
-    elif "start webcam" in query or "open camera" in query:
-        return start_webcam()
-
+    # 🔐 System Commands
     elif "lock system" in query:
         os.system("rundll32.exe user32.dll,LockWorkStation")
         return "System locked."
@@ -265,19 +240,31 @@ def exe_cmd(query):
         change_password_gui()
         return "Changing password."
 
+    # 🧠 Memory
     elif "show my history" in query or "assistant memory" in query:
         from core.logger import read_log
         return read_log()
 
-    # # Internet Commands
-    # elif "tell me about" in query:
-    #     return wikipedia.fetch_wikipedia_summary(query)
-    #
-    # elif "weather in" in query:
-    #     return weather.get_weather_info(query)
-    #
-    # elif "calculate" in query:
-    #     return calculator.evaluate_expression(query)
+    # 🔗 Internet Tools
+    # Calculator
+    if "calculate" in query or "what is" in query:
+        result = evaluate_expression(query)
+        if result:
+            return result
 
-    # ❌ Unknown
+    # Wikipedia
+    # TODO: ("who is", "what is")
+    if any(kw in query for kw in ["tell me about", "who is", "what is"]):
+        result = fetch_wikipedia_summary(query)
+        if result:
+            return result
+
+    # Weather
+    # TODO: Location error
+    if "weather in" in query:
+        result = get_weather_info(query)
+        if result:
+            return result
+
+    # ❌ Unknown command
     return None

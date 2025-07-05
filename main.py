@@ -5,7 +5,7 @@ from core.listener import get_user_input
 from core.speakers import speak
 from core.cmds import exe_cmd
 from core.chatbot import get_chatbot_response
-from core.logger import log_action, log_interaction, get_filtered_memory_logs
+from core.logger import log_action, log_interaction, get_filtered_memory_logs, read_log
 
 
 def process_input(user_input, from_voice=False):
@@ -98,11 +98,61 @@ def open_history_window():
     tk.Button(history_win, text="Apply Filter", command=filter_history, bg="#00bcd4", fg="white").pack()
 
 
+# Log updater every 3 seconds
+def update_logs():
+    if log_visible:
+        logs = read_log()
+        log_box.config(state=tk.NORMAL)
+        log_box.delete("1.0", tk.END)
+        log_box.insert(tk.END, logs)
+        log_box.see(tk.END)
+        log_box.config(state=tk.DISABLED)
+    window.after(3000, update_logs)
+
+
+def toggle_logs():
+    global log_visible
+    log_visible = not log_visible
+
+    if log_visible:
+        log_box.pack(pady=5)
+        log_label.pack()
+        toggle_log_btn.config(text="🙈 Hide Logs")
+    else:
+        log_box.pack_forget()
+        log_label.pack_forget()
+        toggle_log_btn.config(text="👁️ Show Logs")
+
+
+def open_tools_window():
+    tools_win = tk.Toplevel(window)
+    tools_win.title("Tools")
+    tools_win.geometry("400x300")
+    tools_win.config(bg="#2d2d2d")
+
+    tk.Label(tools_win, text="Web Search", bg="#2d2d2d", fg="white").pack(pady=5)
+    search_entry = tk.Entry(tools_win, width=40)
+    search_entry.pack()
+    tk.Button(tools_win, text="Search", command=lambda: process_input(f"search for {search_entry.get()}")).pack(pady=5)
+
+    tk.Label(tools_win, text="Translate Text", bg="#2d2d2d", fg="white").pack(pady=10)
+    translate_text_entry = tk.Entry(tools_win, width=40)
+    translate_text_entry.pack()
+
+    tk.Label(tools_win, text="Target Language (e.g. 'en', 'hi')", bg="#2d2d2d", fg="white").pack()
+    target_lang_entry = tk.Entry(tools_win, width=10)
+    target_lang_entry.pack()
+
+    tk.Button(tools_win, text="Translate", command=lambda: process_input(f"translate {translate_text_entry.get()} to {target_lang_entry.get()}")).pack(pady=5)
+
+
 # GUI Layout
 window = tk.Tk()
 window.title("Akshata")
-window.geometry("700x500")
+window.geometry("800x750")
 window.config(bg="#1e1e1e")
+
+log_visible = True  # default state
 
 # Input
 input_entry = tk.Entry(window, width=50, font=("Arial", 14))
@@ -121,9 +171,24 @@ listen_button.pack(side=tk.LEFT, padx=5)
 history_button = tk.Button(btn_frame, text="📜 View History", command=open_history_window, bg="#9c27b0", fg="white", width=15)
 history_button.pack(side=tk.LEFT, padx=5)
 
+toggle_log_btn = tk.Button(btn_frame, text="👁️Toggle Logs", bg="#ff9800", fg="white", width=15)
+toggle_log_btn.pack(side=tk.LEFT, padx=5)
+toggle_log_btn.config(command=toggle_logs)
 
-# Output
+tools_button = tk.Button(btn_frame, text="🧰 Tools", command=open_tools_window, bg="#795548", fg="white", width=10)
+tools_button.pack(side=tk.LEFT, padx=5)
+
+# Output Box
 output_box = tk.Text(window, height=20, width=80, font=("Courier", 11), bg="#2e2e2e", fg="#00FF00")
 output_box.pack(pady=10)
 
+# Live Log Viewer Section
+log_label = tk.Label(window, text="Live Log Viewer", bg="#1e1e1e", fg="#FFD700", font=("Arial", 10, "bold"))
+log_label.pack()
+
+log_box = tk.Text(window, height=12, width=100, font=("Courier", 10), bg="#121212", fg="#00FFAA")
+log_box.pack(pady=5)
+
+
+update_logs()
 window.mainloop()

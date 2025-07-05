@@ -1,12 +1,15 @@
 import sys
 import threading
-from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton,
-                             QTextEdit, QLineEdit, QLabel, QHBoxLayout, QCheckBox)
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit,
+    QLineEdit, QLabel, QHBoxLayout, QCheckBox
+)
+from PyQt5.QtCore import QTimer
+from PyQt5.QtGui import QTextCursor
 
 from core.cmds import exe_cmd
 from core.logger import read_log
-from core.speech import listen_to_user
+from core.listener import get_user_input  # ✅ Replaced incorrect import
 
 
 class SmartAssistantGUI(QWidget):
@@ -60,10 +63,12 @@ class SmartAssistantGUI(QWidget):
     def update_log(self):
         logs = read_log()
         self.log_area.setPlainText(logs)
+        self.log_area.moveCursor(QTextCursor.End)  # ✅ Scroll to end
 
     def handle_input(self):
         if self.voice_toggle.isChecked():
             self.chat_area.append("[User - Voice]: ...")
+            self.chat_area.moveCursor(QTextCursor.End)
             threading.Thread(target=self.process_voice_command).start()
         else:
             query = self.text_input.text()
@@ -71,16 +76,19 @@ class SmartAssistantGUI(QWidget):
                 self.chat_area.append(f"[User]: {query}")
                 response = exe_cmd(query)
                 self.chat_area.append(f"[Assistant]: {response if response else 'I did not understand that.'}")
+                self.chat_area.moveCursor(QTextCursor.End)
                 self.text_input.clear()
 
     def process_voice_command(self):
         try:
-            query = listen_to_user()
+            query = get_user_input()
             self.chat_area.append(f"[User - Voice]: {query}")
             response = exe_cmd(query)
             self.chat_area.append(f"[Assistant]: {response if response else 'I did not understand that.'}")
+            self.chat_area.moveCursor(QTextCursor.End)
         except Exception as e:
             self.chat_area.append(f"[Error]: {str(e)}")
+            self.chat_area.moveCursor(QTextCursor.End)
 
 
 if __name__ == "__main__":

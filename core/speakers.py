@@ -1,23 +1,45 @@
 import pyttsx3
 
-# Initialize the TTS engine once
+# TTS engine initialization
 engine = pyttsx3.init()
+
+# Global flag (could come from config later)
+is_tts_enabled = True
 
 
 # Optional: Adjust voice, rate, volume
 def setup_voice():
-    voices = engine.getProperty('voices')
-    # For female voice, pick index 1 (usually female on Windows)
-    engine.setProperty('voice', voices[1].id)
-    engine.setProperty('rate', 180)  # Speed of speech
-    engine.setProperty('volume', 1.0)  # Max volume
+    try:
+        voices = engine.getProperty('voices')
+
+        # Attempt to set a female voice
+        for voice in voices:
+            if "female" in voice.name.lower() or "zira" in voice.name.lower():
+                engine.setProperty('voice', voice.id)
+                break
+        else:
+            engine.setProperty('voice', voices[0].id)  # Default to first
+
+        engine.setProperty('rate', 180)    # Speed of speech
+        engine.setProperty('volume', 1.0)  # Max volume
+
+    except Exception as e:
+        print(f"TTS setup error: {e}")
 
 
-# Call this once at import
-setup_voice()
-
-
+# Speak text
 def speak(text):
-    print(f"🗣️ Speaking: {text}")
-    engine.say(text)
-    engine.runAndWait()
+    if not is_tts_enabled:
+        print(f"[Muted] {text}")
+        return
+
+    try:
+        print(f"🗣️ Speaking: {text}")
+        engine.say(text)
+        engine.runAndWait()
+    except Exception as e:
+        print(f"Speech error: {e}")
+
+
+# Initialize on import
+setup_voice()

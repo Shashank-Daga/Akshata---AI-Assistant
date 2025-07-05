@@ -43,9 +43,9 @@ def close_all_windows():
             if win.title and win.isVisible:
                 win.close()
                 closed += 1
-        except Exception:
-            continue
-    return f"Closed {closed} windows."
+        except Exception as e:
+            print(f"Error closing window: {e}")
+    return f"Closed {closed} window(s)."
 
 
 def snap_active_window(direction):
@@ -63,15 +63,19 @@ def snap_active_window(direction):
 
 def close_specific_app(app_name):
     closed = 0
+    app_name = app_name.lower()
+
     for proc in psutil.process_iter(['pid', 'name']):
-        if app_name.lower() in proc.info['name'].lower():
-            try:
+        try:
+            proc_name = proc.info['name'].lower()
+            if app_name in proc_name and len(app_name) >= 3:  # avoid closing on short/loose matches
                 os.kill(proc.info['pid'], 9)
                 closed += 1
-            except:
-                pass
+        except Exception as e:
+            print(f"Error closing {proc.info.get('name')}: {e}")
+
     if closed > 0:
-        return f"Closed {closed} {app_name} window(s)."
+        return f"Closed {closed} instance(s) of {app_name}."
     else:
         return f"No running windows found for {app_name}."
 
