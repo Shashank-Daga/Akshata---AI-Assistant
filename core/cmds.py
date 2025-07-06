@@ -26,8 +26,7 @@ from core.reminder import handle_reminder_cmd
 from core.internet_tools.calculator import evaluate_expression
 from core.internet_tools.wikipedia import fetch_wikipedia_summary
 from core.internet_tools.weather import get_weather_info
-from core.tools import search_web, translate_text
-
+from core.tools import search_web, translate_text, launch_app
 
 SEARCH_FOLDER = os.path.expanduser("~/Documents")  # Instead of hardcoded D:\\College
 
@@ -102,7 +101,11 @@ def exe_cmd(query):
             webbrowser.open(f"https://www.youtube.com/results?search_query={song}")
             return f"Playing {song} on YouTube."
         return "Please specify what to play."
-    
+
+    elif query.startswith("open ") or query.startswith("launch "):
+        app_name = query.split(" ", 1)[-1]
+        return launch_app(app_name)
+
     # Web Search
     if query.startswith("search for"):
         query = query.replace("search for", "").strip()

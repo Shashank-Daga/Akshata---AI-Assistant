@@ -1,11 +1,31 @@
 import tkinter as tk
 from threading import Thread
 
+from tkinter import messagebox
+
 from core.listener import get_user_input
 from core.speakers import speak
 from core.cmds import exe_cmd
 from core.chatbot import get_chatbot_response
 from core.logger import log_action, log_interaction, get_filtered_memory_logs, read_log
+
+is_dark = True
+
+
+def toggle_theme():
+    global is_dark
+    is_dark = not is_dark
+
+    bg = "#ffffff" if not is_dark else "#1e1e1e"
+    fg = "#000000" if not is_dark else "#00FF00"
+    entry_bg = "#f0f0f0" if not is_dark else "#2e2e2e"
+
+    window.config(bg=bg)
+    input_entry.config(bg=entry_bg, fg=fg)
+    output_box.config(bg=entry_bg, fg=fg)
+    log_box.config(bg=entry_bg, fg=fg)
+    log_label.config(bg=bg, fg=fg)
+    btn_frame.config(bg=bg)
 
 
 def process_input(user_input, from_voice=False):
@@ -98,6 +118,12 @@ def open_history_window():
     tk.Button(history_win, text="Apply Filter", command=filter_history, bg="#00bcd4", fg="white").pack()
 
 
+def clear_chat():
+    confirm = messagebox.askyesno("Clear Chat", "Are you sure you want to clear the chat?")
+    if confirm:
+        output_box.delete("1.0", tk.END)
+
+
 # Log updater every 3 seconds
 def update_logs():
     if log_visible:
@@ -146,10 +172,26 @@ def open_tools_window():
     tk.Button(tools_win, text="Translate", command=lambda: process_input(f"translate {translate_text_entry.get()} to {target_lang_entry.get()}")).pack(pady=5)
 
 
+def open_app_launcher():
+    app_win = tk.Toplevel(window)
+    app_win.title("App Launcher")
+    app_win.geometry("300x200")
+    app_win.config(bg="#2c2c2c")
+
+    tk.Label(app_win, text="Select an App:", bg="#2c2c2c", fg="white").pack(pady=5)
+    app_var = tk.StringVar(app_win)
+    app_var.set("notepad")
+
+    app_dropdown = tk.OptionMenu(app_win, app_var, *["notepad", "calculator", "chrome", "vscode"])
+    app_dropdown.pack(pady=5)
+
+    tk.Button(app_win, text="Launch", command=lambda: process_input(f"launch {app_var.get()}")).pack(pady=10)
+
+
 # GUI Layout
 window = tk.Tk()
 window.title("Akshata")
-window.geometry("800x750")
+window.geometry("900x800")
 window.config(bg="#1e1e1e")
 
 log_visible = True  # default state
@@ -171,12 +213,21 @@ listen_button.pack(side=tk.LEFT, padx=5)
 history_button = tk.Button(btn_frame, text="📜 View History", command=open_history_window, bg="#9c27b0", fg="white", width=15)
 history_button.pack(side=tk.LEFT, padx=5)
 
+clear_button = tk.Button(btn_frame, text="🧹 Clear Chat", command=clear_chat, bg="#f44336", fg="white", width=12)
+clear_button.pack(side=tk.LEFT, padx=5)
+
 toggle_log_btn = tk.Button(btn_frame, text="👁️Toggle Logs", bg="#ff9800", fg="white", width=15)
 toggle_log_btn.pack(side=tk.LEFT, padx=5)
 toggle_log_btn.config(command=toggle_logs)
 
+app_btn = tk.Button(btn_frame, text="🚀 Apps", command=open_app_launcher, bg="#3f51b5", fg="white", width=10)
+app_btn.pack(side=tk.LEFT, padx=5)
+
 tools_button = tk.Button(btn_frame, text="🧰 Tools", command=open_tools_window, bg="#795548", fg="white", width=10)
 tools_button.pack(side=tk.LEFT, padx=5)
+
+theme_btn = tk.Button(btn_frame, text="🌓 Theme", command=toggle_theme, bg="#607d8b", fg="white", width=10)
+theme_btn.pack(side=tk.LEFT, padx=5)
 
 # Output Box
 output_box = tk.Text(window, height=20, width=80, font=("Courier", 11), bg="#2e2e2e", fg="#00FF00")

@@ -23,7 +23,7 @@ from cmds import exe_cmd
 
 # schedule_photos(30, 2)
 # exe_cmd("Remember when I say 'lock up', I mean 'lock system'")
-exe_cmd("What is 2+2*2")
+exe_cmd("launch vsc")
 
 # from core.reminder import schedule_reminder, get_upcoming_reminders, list_reminders
 #
